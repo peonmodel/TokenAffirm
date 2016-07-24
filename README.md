@@ -50,16 +50,16 @@ function resumeUserAction(){
 // TODO: give an example
 
 ## API
-### constructor(prefix, [options]) *server-side*
-### constructor(prefix) *client-side*
+### constructor(identifier, [options]) *server-side*
+### constructor(identifier) *client-side*
 
 Instantiate class
 
-#### prefix
+#### identifier
 
 Type: ```string``` (*unique for server-side, need to be same as server instance for client-side*)
 
-Unique identifier for server-side instance of TokenAffirm, this string will be used to name the Meteor methods required for client-side communication with server. Multiple client-side instances may communicate with the same server-side instance by using the same prefix.
+Unique identifier for server-side instance of TokenAffirm, this string will be used to name the Meteor methods required for client-side communication with server. Multiple client-side instances may communicate with the same server-side instance by using the same identifier.
 
 #### options *server-side-only*
 
@@ -79,7 +79,7 @@ Object containing the send function used to send the token. *factor_name* is nam
 
 Type: ```function(contact, token, factor)```
 
-Default: ```(contact, token, factor)=>{console.log(contact, token, factor)}```
+Default: ```(contact, token, factor)=>{console.log(`token: ${token} sent to ${contact} via ${factor}`)}```
 
 Send function used to send the token
 
@@ -314,3 +314,4 @@ Is `true` if session exists and has been verified, ```false``` otherwise.
 - documentation for configuration
 - documentation for dependencies
 - documentation for license
+- documentation for assertOpenSession()

@@ -1,25 +1,23 @@
 import { Meteor } from 'meteor/meteor';
 import { check } from 'meteor/check';
 
-
 /**
  * class representing a client-side TokenAffirm instance
  */
 export class TokenAffirm {
 
-
   /**
    * constructor - create a TokenAffirm instance,
-   * server-side must have TokenAffirm instance initialised with same prefix
+   * server-side must have TokenAffirm instance initialised with same identifier
    * multiple client-side instance may communicate with the same server-side instance
    *
-   * @param  {string} prefix      a unique identifier for this instance
+   * @param  {string} identifier      a unique identifier for this instance
    */
-  constructor(prefix){
-    check(prefix, String);
-    this.prefix = prefix;
+  constructor(identifier){
+    check(identifier, String);
+    this.identifier = identifier;
+    this.prefix = `TokenAffirm:${this.identifier}`;
   }
-
 
   /**
    * requestToken - request a confirmation token for user action
@@ -28,9 +26,8 @@ export class TokenAffirm {
    */
   requestToken(callback){
     check(callback, Function);
-    Meteor.call(`TokenAffirm:${this.prefix}/requestToken`, callback);
+    Meteor.call(`${this.prefix}/requestToken`, callback);
   }
-
 
   /**
    * verifyToken - verify token against a session
@@ -43,7 +40,7 @@ export class TokenAffirm {
     check(sessionId, String);
     check(token, String);
     check(callback, Function);
-    Meteor.call(`TokenAffirm:${this.prefix}/verifyToken`, sessionId, token, callback);
+    Meteor.call(`${this.prefix}/verifyToken`, sessionId, token, callback);
   }
 
   /**
@@ -55,7 +52,7 @@ export class TokenAffirm {
   invalidateSession(sessionId, callback = ()=>{}){
     check(sessionId, String);
     check(callback, Function);
-    Meteor.call(`TokenAffirm:${this.prefix}/invalidateSession`, sessionId, callback);
+    Meteor.call(`${this.prefix}/invalidateSession`, sessionId, callback);
   }
 
   /**
@@ -65,7 +62,20 @@ export class TokenAffirm {
    */
   verifyContact(callback){
     check(callback, Function);
-    Meteor.call(`TokenAffirm:${this.prefix}/verifyContact`, callback);
+    Meteor.call(`${this.prefix}/verifyContact`, callback);
+  }
+
+  /**
+   * assertOpenSession - check if there is a session of id awaiting token
+   * useful for checking if need to regenerate token
+   *
+   * @param  {string} sessionId id of session to check
+   * @param  {function} callback = ()=>{}  optional function to call when server returns result
+   */
+  assertOpenSession(sessionId, callback = ()=>{}){
+    check(sessionId, String);
+    check(callback, Function);
+    Meteor.call(`${this.prefix}/assertOpenSession`, sessionId, callback);
   }
 
 }

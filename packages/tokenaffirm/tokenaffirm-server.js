@@ -163,7 +163,7 @@ export class TokenAffirm {
        */
       [`${prefix}/assertOpenSession`]:function assertOpenSession(sessionId){
         check(sessionId, String);
-        return instance.assertOpenSession(sessionId);
+        return instance.assertOpenSession();
       },
     });
 

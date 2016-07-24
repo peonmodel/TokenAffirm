@@ -23,7 +23,7 @@ Package.onUse(function(api) {
   api.imply([
     'accounts-password',
   ]);
-  api.mainModule('tokenaffirm.js', 'server');
+  api.mainModule('tokenaffirm-server.js', 'server');
   api.mainModule('tokenaffirm-client.js', 'client');
 });
 
