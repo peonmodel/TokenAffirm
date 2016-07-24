@@ -59,7 +59,7 @@ Instantiate class
 
 Type: ```string``` (*unique for server-side, need to be same as server instance for client-side*)
 
-Unique identifier for instance of TokenAffirm, this string will be used to name the Meteor methods required for client-side communication with server. Multiple client-side instances may communicate with the same server-side instance.
+Unique identifier for server-side instance of TokenAffirm, this string will be used to name the Meteor methods required for client-side communication with server. Multiple client-side instances may communicate with the same server-side instance by using the same prefix.
 
 #### options *server-side-only*
 
@@ -153,9 +153,7 @@ Type: ```string```
 
 Default: ```TokenAffirm```
 
-Where contacts details used to send user token is stored within profile
-
-Default is pointing to ```Meteor.user().profile['TokenAffirm']```
+Where contacts details used to send user token is stored within profile. Default is pointing to ```Meteor.user().profile['TokenAffirm']```
 
 ### requestToken() *server-side*
 ### requestToken(callback) *client-side*
@@ -305,4 +303,14 @@ Verify that confirmation session has been verified.
 
 Type: ```boolean```
 
-`true` if session exists and has been verified, ```false``` otherwise.
+Is `true` if session exists and has been verified, ```false``` otherwise.
+
+## Dependencies
+
+## License
+
+## TODO
+- write tests
+- documentation for configuration
+- documentation for dependencies
+- documentation for license
