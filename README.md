@@ -33,6 +33,21 @@ Affirm.verifyToken(session, token, (error, isVerified)=>{
 });  
 
 ```
+### Server-side
+```
+// check session had been verified
+function resumeUserAction(){
+  if (! Affirm.isVerified(sessionId)){
+    // not verified
+    throw new Meteor.Error(`action not affirmed`);
+  } else {
+    // continue user actions
+  }
+}
+```
+
+## Configuration
+// TODO: give an example
 
 ## API
 ### constructor(prefix, [options]) *server-side*
