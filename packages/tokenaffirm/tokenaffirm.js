@@ -23,8 +23,19 @@ let defaultConfig = {
   profile: 'TokenAffirm',
 };
 
+
+/**
+ * class representing a TokenAffirm instance
+ */
 export class TokenAffirm {
 
+
+  /**
+   * constructor - create a TokenAffirm instance
+   *
+   * @param  {string} prefix      a unique identifier for this instance
+   * @param  {object} config = {} contains various configuration settings
+   */
   constructor(prefix, config = {}){
     check(prefix, String);
     this.config = defaultConfig;
@@ -37,6 +48,12 @@ export class TokenAffirm {
     this.defineMethods(prefix);
   }
 
+
+  /**
+   * validateConfig - validates the configuration, replace with defaults otherwise
+   *
+   * @param  {object} config = {} configuration object
+   */
   validateConfig(config = {}){
     _.each(config.factors, (factor, key)=>{
       this.addFactor(factor, key);
@@ -55,10 +72,25 @@ export class TokenAffirm {
     Object.assign(this.config, config);
   }
 
+
+  /**
+   * defineMethods - defines the Meteor methods required by client-side
+   * also set the rate limits for the methods
+   *
+   * @param  {string} prefix unique identifier string, used to name methods
+   */
   defineMethods(prefix){
     this.prefix = prefix;
     let instance = this;
     Meteor.methods({
+
+      /**
+       * requestToken - allow client-side to request a confirmation token
+       *
+       * @throws {Meteor.Error} when contact details in user profile does not
+       * correspond with configuration details of session
+       * @returns {string}  session id of confirmation
+       */
       [`TokenAffirm:${this.prefix}/requestToken`]:function requestToken(){
         let user = Meteor.user();
         if (!user) {throw new Meteor.Error(`login required`);}
@@ -70,14 +102,37 @@ export class TokenAffirm {
         }
         return instance.requestToken(contact, factor);
       },
+
+      /**
+       * verifyToken - allow client-side to verify token sent
+       *
+       * @param  {string} sessionId session id of TokenAffirm session
+       * @param  {string} token     token sent to factor
+       * @returns {boolean}           true when session is verified
+       */
       [`TokenAffirm:${this.prefix}/verifyToken`]:function verifyToken(sessionId, token){
         check(sessionId, String);
         check(token, String);
         return instance.verifyToken(sessionId, token);
       },
+
+      /**
+       * invalidateSession - allow client-side to cancel a verification session
+       *
+       * @param  {string} sessionId session id of TokenAffirm session
+       * @returns {number}           1 when session is removed, 0 otherwise
+       */
       [`TokenAffirm:${this.prefix}/invalidateSession`]:function invalidateSession(sessionId){
         check(sessionId, String);
         return instance.invalidateSession(sessionId);
+      },
+      /**
+       * verifyContact - return contact details of active user where token would be sent to
+       *
+       * @returns {object}  contact details
+       */
+      [`TokenAffirm:${this.prefix}/verifyContact`]:function verifyContact(){
+        return instance.verifyContact();
       },
     });
 
@@ -102,8 +157,23 @@ export class TokenAffirm {
       name: `TokenAffirm:${this.prefix}/invalidateSession`,
     };
     DDPRateLimiter.addRule(invalidateSessionRule, this.config.requestCount, this.config.requestInterval);
+
+    let verifyContactRule = {
+      userId: this.config.validate,
+      type: 'method',
+      name: `TokenAffirm:${this.prefix}/verifyContact`,
+    };
+    DDPRateLimiter.addRule(verifyContactRule, this.config.requestCount, this.config.requestInterval);
+
   }
 
+
+  /**
+   * addFactor - add a factor to TokenAffirm instance
+   *
+   * @param  {string} factor sending method, user-defined function to call to send factor
+   * @param  {string} key    name of factor, i.e. 'telegram', 'SMS' or 'email'
+   */
   addFactor(factor, key){
     check(key, String);
 
@@ -119,11 +189,26 @@ export class TokenAffirm {
     this.config.factors[key] = factor;
   }
 
+
+  /**
+   * isVerified - check if session is verified
+   *
+   * @param  {string} sessionId id of session to check
+   * @returns {boolean}           true when session is verified
+   */
   isVerified(sessionId){
     let session = this.collection.findOne({_id: sessionId});
     return !!get(session, 'verifyAt');
   }
 
+
+  /**
+   * requestToken - request a token to affirm user actions
+   *
+   * @param  {string} contactAddress essential contact address, i.e. phone number or email address
+   * @param  {string} contactMethod  name of factor, i.e. 'telegram', 'SMS' or 'email'
+   * @returns {string}                id of session created
+   */
   requestToken(contactAddress, contactMethod){
     let token = this.generateToken();
     let sessionId = this.createSession(token, contactMethod);
@@ -131,6 +216,14 @@ export class TokenAffirm {
     return sessionId;
   }
 
+
+  /**
+   * verifyToken - verify a token
+   *
+   * @param  {string} sessionId id of session to verify
+   * @param  {string} token     token used to verify session
+   * @returns {boolean}           true when session is verified
+   */
   verifyToken(sessionId, token){
     let session = this.collection.findOne({_id: sessionId, user: Meteor.user()._id});
     if (!session){return false;}
@@ -144,10 +237,26 @@ export class TokenAffirm {
     return true;
   }
 
+
+  /**
+   * invalidateSession - invalidates a confirmation session
+   *
+   * @param  {string} sessionId id of session to invalidate
+   * @returns {number}           1 if session is successfully invalidated
+   */
   invalidateSession(sessionId){
     return this.collection.remove({_id: sessionId});
   }
 
+
+  /**
+   * sendToken - sends token via the factor user defined
+   *
+   * @param  {string} contact address to send token to
+   * @param  {string} token   token used for verification
+   * @param  {string} factor  name of factor to sent token via
+   * @returns {*}         return value of user-defined sending function
+   */
   sendToken(contact, token, factor){
     let method = this.config.factors[factor];
     if (!method) {
@@ -157,10 +266,24 @@ export class TokenAffirm {
     return method.send(contact, token, factor);
   }
 
+
+  /**
+   * generateToken - generates a token, uses user defined function to create unique verification token
+   *
+   * @returns {string}  unique token string used for verification of session
+   */
   generateToken(){
     return this.config.generate();
   }
 
+
+  /**
+   * createSession - creates a verification session
+   *
+   * @param  {string} token  unique string for verification
+   * @param  {string} factor name of method token should be sent via
+   * @returns {string}        id of session created
+   */
   createSession(token, factor){
     return this.collection.insert({
       token,
@@ -169,8 +292,27 @@ export class TokenAffirm {
       user: Meteor.user()._id,
     });
   }
+
+
+  /**
+   * verifyContact - return contact details of active user where token would be sent to
+   *
+   * @returns {object}  contact details
+   */
+  verifyContact(){
+    // TODO: write verifyContact for client-side
+    return get(Meteor.user(), `profile.${this.config.profile}`);
+  }
 }
 
+
+/**
+ * get - helper function to get value in deeply nested objects
+ *
+ * @param  {object} obj       object to get value from
+ * @param  {string|array} ...params combination of strings and arrays to navigate to value
+ * @returns {*}           value to get
+ */
 function get (obj, ...params) {
   function getObject(object, path){
     if (_.isUndefined(object)){return undefined;}
