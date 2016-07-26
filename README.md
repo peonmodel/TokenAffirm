@@ -2,6 +2,30 @@
 
 Meteor package to affirm actions of users. Sends a one-time token that user will need to input to confirm their actions. Token will be sent via another messaging platform (factor) that is configurable.
 
+## Table of Content
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+
+- [Install](#install)
+- [Usage](#usage)
+  - [Setup](#setup)
+  - [Client-side](#client-side)
+  - [Server-side](#server-side)
+- [Configuration](#configuration)
+- [API](#api)
+  - [constructor](#constructoridentifier-options-server-side)
+  - [requestToken](#requesttoken-server-side)
+  - [verifyToken](#verifytokensessionid-token-server-side)
+  - [invalidateSession](#invalidatesessionsessionid-server-side)
+  - [verifyContact](#verifycontact-server-side)
+  - [isVerified](#isverified-server-side)
+- [Dependencies](#dependencies)
+- [License](#license)
+- [TODO](#todo)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Install
 
 ## Usage
@@ -9,8 +33,10 @@ Meteor package to affirm actions of users. Sends a one-time token that user will
 ### Setup
 ```
 // creates an instance of TokenAffirm on client and server-side
-Affirm = new TokenAffirm('unique-identifier', config);
+Affirm = new TokenAffirm('unique-identifier', /*config*/);
 ```
+Creates an instance of TokenAffirm, ```config``` is an optional parameter, more details below.
+
 ### Client-side
 ```
 // request a confirmation token
@@ -22,7 +48,10 @@ Affirm.requestToken((error, session)=>{
     console.log('session id: '+session);
   }
 });
-
+```
+Request a confirmation session-token, session id will be returned to client while
+token is sent to the other factor.
+```
 // verify token
 Affirm.verifyToken(session, token, (error, isVerified)=>{
   if (error) {console.log('verification failed')}
@@ -33,6 +62,8 @@ Affirm.verifyToken(session, token, (error, isVerified)=>{
 });  
 
 ```
+Verifies a valid session-token pair is sent, once user have gotten the token, use this function to verify the token. This sets session.isVerified to true, which then can be used to affirm user action on server-side. See below.
+
 ### Server-side
 ```
 // check session had been verified
@@ -45,7 +76,7 @@ function resumeUserAction(){
   }
 }
 ```
-
+Check if session is verified, for use in server-side to check whether user action is affirmed.
 ## Configuration
 // TODO: give an example
 
@@ -55,13 +86,13 @@ function resumeUserAction(){
 
 Instantiate class
 
-#### identifier
+**identifier**
 
 Type: ```string``` (*unique for server-side, need to be same as server instance for client-side*)
 
 Unique identifier for server-side instance of TokenAffirm, this string will be used to name the Meteor methods required for client-side communication with server. Multiple client-side instances may communicate with the same server-side instance by using the same identifier.
 
-#### options *server-side-only*
+**options** *server-side-only*
 
 **options.factors**
 
@@ -214,7 +245,7 @@ Type: ```undefined|boolean```
 Is ```undefined``` if meteor method returns ```error```. Is ```true``` if right ```token``` is sent, ```false``` otherwise.
 
 ### invalidateSession(sessionId) *server-side*
-### invalidateSession(sessionId, callback) *client-side*
+### invalidateSession(sessionId, [callback]) *client-side*
 
 Invalidates confirmation session
 
@@ -315,3 +346,4 @@ Is `true` if session exists and has been verified, ```false``` otherwise.
 - documentation for dependencies
 - documentation for license
 - documentation for assertOpenSession()
+- add callback to verifyToken to aid in resuming action

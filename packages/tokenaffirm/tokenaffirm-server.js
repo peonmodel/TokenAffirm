@@ -16,9 +16,9 @@ let defaultConfig = {
   generate: ()=>Random.id(6),
   validate: ()=>true,
   settings: null,
-  expiry: 5*(60*1000),  // in milliseconds
+  expiry: 5*(60*1000),  // 5 minutes in milliseconds
   retain: 5*(60*1000),
-  requestInterval: 10*1000,
+  requestInterval: 10*1000,  // 10 seconds
   requestCount: 1,
   profile: 'TokenAffirm',
 };
@@ -195,6 +195,13 @@ export class TokenAffirm {
       name: `${prefix}/verifyContact`,
     };
     DDPRateLimiter.addRule(verifyContactRule, this.config.requestCount, this.config.requestInterval);
+
+    let assertOpenSessionRule = {
+      userId: this.config.validate,
+      type: 'method',
+      name: `${prefix}/assertOpenSession`,
+    };
+    DDPRateLimiter.addRule(assertOpenSessionRule, this.config.requestCount, this.config.requestInterval);
 
   }
 
