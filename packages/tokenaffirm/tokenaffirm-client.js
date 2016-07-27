@@ -17,7 +17,7 @@ export class TokenAffirm {
     check(identifier, String);
     this.identifier = identifier;
     this.prefix = `TokenAffirm:${this.identifier}`;
-    this.session = null;
+    // this.session = null;
   }
 
   /**
@@ -28,10 +28,7 @@ export class TokenAffirm {
    */
   requestToken(callback){
     check(callback, Function);
-    Meteor.call(`${this.prefix}/requestToken`, this.session, (err, res)=>{
-      if (res) {this.session = res;}
-      callback(err, res);
-    });
+    Meteor.call(`${this.prefix}/requestToken`, callback);
   }
 
   /**
@@ -43,10 +40,7 @@ export class TokenAffirm {
   verifyToken(token, callback){
     check(token, String);
     check(callback, Function);
-    Meteor.call(`${this.prefix}/verifyToken`, this.session, token, (err, res)=>{
-      if (res === true) {this.session = null;}
-      callback(err, res);
-    });
+    Meteor.call(`${this.prefix}/verifyToken`, token, callback);
   }
 
   /**
@@ -56,10 +50,7 @@ export class TokenAffirm {
    */
   invalidateSession(callback = ()=>{}){
     check(callback, Function);
-    Meteor.call(`${this.prefix}/invalidateSession`, this.session, (err, res)=>{
-      if (res) {this.session = null;}
-      callback(err, res);
-    });
+    Meteor.call(`${this.prefix}/invalidateSession`, callback);
   }
 
   /**
@@ -80,10 +71,7 @@ export class TokenAffirm {
    */
   assertOpenSession(callback = ()=>{}){
     check(callback, Function);
-    Meteor.call(`${this.prefix}/assertOpenSession`, this.session, (err, res)=>{
-      if (res === false) {this.session = null;}
-      callback(err, res);
-    });
+    Meteor.call(`${this.prefix}/assertOpenSession`, callback);
   }
 
 }

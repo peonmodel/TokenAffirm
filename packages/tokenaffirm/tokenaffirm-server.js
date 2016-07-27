@@ -111,46 +111,40 @@ export class TokenAffirm {
        *
        * @throws {Meteor.Error} when contact details in user profile does not
        * correspond with configuration details of session
-       * @param {string} sessionId id of previous session to invalidate
        * @returns {string}  session id of confirmation
        */
-      [`${prefix}/requestToken`]:function requestToken(sessionId){
+      [`${prefix}/requestToken`]:function requestToken(){
         // TODO: use this.connection.id and user to find session instead
-        check(sessionId, Match.Maybe(String));
         let user = Meteor.user();
         if (!user) {throw new Meteor.Error(`login required`);}
-        if (sessionId) {instance.invalidateSession(sessionId);}
+        instance.invalidateSession(this.connection.id);
         let notify = get(user, `profile.${instance.config.profile}`);
         check(notify, {contact: String, factor: String});
         let { contact, factor } = notify;
         if (!instance.config.factors[factor]){
           throw new Meteor.Error(`${factor} not supported`);
         }
-        return instance.requestToken(contact, factor);
+        return instance.requestToken(this.connection.id, contact, factor);
       },
 
       /**
        * verifyToken - allow client-side to verify token sent
        *
-       * @param  {string} sessionId session id of TokenAffirm session
        * @param  {string} token     token sent to factor
        * @returns {boolean}           true when session is verified
        */
-      [`${prefix}/verifyToken`]:function verifyToken(sessionId, token){
-        check(sessionId, String);
+      [`${prefix}/verifyToken`]:function verifyToken(token){
         check(token, String);
-        return instance.verifyToken(sessionId, token);
+        return instance.verifyToken(this.connection.id, token);
       },
 
       /**
        * invalidateSession - allow client-side to cancel a verification session
        *
-       * @param  {string} sessionId session id of TokenAffirm session
        * @returns {number}           1 when session is removed, 0 otherwise
        */
-      [`${prefix}/invalidateSession`]:function invalidateSession(sessionId){
-        check(sessionId, String);
-        return instance.invalidateSession(sessionId);
+      [`${prefix}/invalidateSession`]:function invalidateSession(){
+        return instance.invalidateSession(this.connection.id);
       },
       /**
        * verifyContact - return contact details of active user where token would be sent to
@@ -164,12 +158,10 @@ export class TokenAffirm {
        * assertOpenSession - check if there is a session of id awaiting token
        * useful for checking if need to regenerate token
        *
-       * @params {string} sessionId id of session to check
        * @returns {boolean }  true if session exist and awaiting token
        */
-      [`${prefix}/assertOpenSession`]:function assertOpenSession(sessionId){
-        check(sessionId, String);
-        return instance.assertOpenSession();
+      [`${prefix}/assertOpenSession`]:function assertOpenSession(){
+        return instance.assertOpenSession(this.connection.id);
       },
     });
 
@@ -214,11 +206,11 @@ export class TokenAffirm {
   /**
    * isVerified - check if session is verified
    *
-   * @param  {string} sessionId id of session to check
+   * @param  {string} connectionId id of session to check
    * @returns {boolean}           true when session is verified
    */
-  isVerified(sessionId){
-    let session = this.collection.findOne({_id: sessionId});
+  isVerified(connectionId){
+    let session = this.collection.findOne({connectionId: connectionId});
     return !!get(session, 'verifyAt');
   }
 
@@ -234,33 +226,34 @@ export class TokenAffirm {
   /**
    * requestTokenAsync - request a token to affirm user actions, is asynchronous
    *
+   * @param {string} connectionId id used for subsequent queries
    * @param  {string} contact essential contact address, i.e. phone number or email address
    * @param  {string} factor  name of factor, i.e. 'telegram', 'SMS' or 'email'
    * @param {function} callback function to pass to async send method
    */
-  requestTokenAsync(contact, factor, callback){
+  requestTokenAsync(connectionId, contact, factor, callback){
     let token = this.generateToken();
-    let sessionId = this.createSession(token, factor);
+    this.createSession(connectionId, token, factor);
     this.sendToken(contact, token, factor, (err/*, res*/)=>{
       if (err) {callback(err);}
-      else {callback(undefined, sessionId);}
+      else {callback(undefined, true);}
     });
   }
 
   /**
    * verifyToken - verify a token - session
    *
-   * @param  {string} sessionId id of session to verify
+   * @param  {string} connectionId id of session to verify
    * @param  {string} token     token used to verify session
    * @returns {boolean}           true when session is verified
    */
-  verifyToken(sessionId, token){
-    let session = this.collection.findOne({_id: sessionId, user: Meteor.user()._id});
+  verifyToken(connectionId, token){
+    let session = this.collection.findOne({connectionId: connectionId, userId: Meteor.user()._id});
     if (!session){return false;}
     if (!!session.verifyAt){return false;}
     if ((new Date() - new Date(session.expireAt)) > 0) {return false;}
     if (session.token !== token) {return false;}
-    this.collection.update(sessionId, {
+    this.collection.update(session._id, {
       $set: {verifyAt: new Date()},
       $unset: {expireAt: true},
     });
@@ -271,22 +264,22 @@ export class TokenAffirm {
    * invalidateSession - invalidates a confirmation session, does not remove
    * validated sessions
    *
-   * @param  {string} sessionId id of session to invalidate
+   * @param  {string} connectionId id of session to invalidate
    * @returns {number}           1 if session is successfully invalidated
    */
-  invalidateSession(sessionId){
-    return this.collection.remove({_id: sessionId, verifyAt: {$exists: false}});
+  invalidateSession(connectionId){
+    return this.collection.remove({connectionId: connectionId, verifyAt: {$exists: false}});
   }
 
   /**
    * assertOpenSession - check if there is a session of id awaiting token
    * useful for checking if need to regenerate token
    *
-   * @params {string} sessionId id of session to check
+   * @params {string} connectionId id of session to check
    * @returns {boolean }  true if session exist and awaiting token
    */
-  assertOpenSession(sessionId){
-    let session = this.collection.findOne({_id: sessionId, user: Meteor.user()._id});
+  assertOpenSession(connectionId){
+    let session = this.collection.findOne({connectionId: connectionId, userId: Meteor.user()._id});
     if (!session) {return false;}
     if (!!session.verifyAt) {return false;}  // session is closed
     if ((new Date() - new Date(session.expireAt)) > 0) {return false;}
@@ -330,16 +323,18 @@ export class TokenAffirm {
   /**
    * createSession - creates a verification session
    *
+   * @param {string} connectionId id used for subsequent queries
    * @param  {string} token  unique string for verification
    * @param  {string} factor name of method token should be sent via
    * @returns {string}        id of session created
    */
-  createSession(token, factor){
+  createSession(connectionId, token, factor){
     return this.collection.insert({
       token,
       factor,
       expireAt: new Date((new Date()).getTime() + this.config.expiry),
-      user: Meteor.user()._id,
+      userId: Meteor.user()._id,
+      connectionId,
     });
   }
 

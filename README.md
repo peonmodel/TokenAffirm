@@ -117,15 +117,15 @@ Type: ```function(contact, token, factor, settings, callback)```
 
 Default: ``` (contact, token, factor, settings, callback)=>{callback(undefined, 'success');} ```
 
-Send function used to send the token, is typically an asynchronous function requiring ```callback```. ```settings``` refer to settings object, see [[*factor_name*].settings](#**options.factors.[*factor_name*].settings**).
+Send function used to send the token, is typically an asynchronous function requiring ```callback``` function. ```settings``` refer to settings object, see [[*factor_name*].settings](#**options.factors.[*factor_name*].settings**).
 
-**options.factors.[*factor_name*].send.*callback***.*arguments.error*
+**options.factors.[*factor_name*].send**.*arguments*.**callback**.*arguments*.**error**
 
 Type: ```error```
 
 Error thrown by user-defined sending method. If error object is not already Meteor.Error instance, it will be wrapped as one and eventually thrown back to client.
 
-**options.factors.[*factor_name*].send.*callback***.*arguments.result*
+**options.factors.[*factor_name*].send**.*arguments*.**callback**.*arguments*.**result**
 
 Type: ```success```
 
