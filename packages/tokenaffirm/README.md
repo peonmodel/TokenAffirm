@@ -190,6 +190,9 @@ Where contacts details used to send user token is stored within profile. Default
 ### requestToken(callback) *client-side*
 
 Create a session for confirmation with token for active Meteor user. Sends token via another factor and return session id.
+Also invalidates any old session still pending if any. Sets active session to ```result``` on success callback.
+
+Only 1 session may be active at one time.
 
 **callback** *client-side*
 
@@ -197,28 +200,29 @@ Type: ```function(error, result)```
 
 Callback function to call when Meteor method returns.
 
-*callback.arguments.error*
+**callback**.*arguments.error*
 
 Type: ```undefined|Meteor.Error```
 
 Is ```undefined``` if meteor method successfully execute, ```Meteor.Error``` otherwise.
 
-*callback.arguments.result*
+**callback**.*arguments.result*
 
 Type: ```undefined|string```
 
 Is ```undefined``` if meteor method returns ```error```. Is ```sessionId``` of confirmation session created. Meanwhile a token will be sent via another factor.
 
 ### verifyToken(sessionId, token) *server-side*
-### verifyToken(sessionId, token, callback) *client-side*
+### verifyToken(token, callback) *client-side*
 
-Verify user sent the right token for sessionId
+Verify user sent the right token for active session. Only one session may be open
+at a time. Sets active session to ```null``` on success callback.
 
-**sessionId**
+**sessionId** *server-side-only*
 
 Type: ```string```
 
-Id of confirmation session.
+Id of confirmation session. Uses active session on client-side.
 
 **token**
 
@@ -232,28 +236,28 @@ Type: ```function(error, result)```
 
 Callback function to call when Meteor method returns.
 
-*callback.arguments.error*
+**callback**.*arguments.error*
 
 Type: ```undefined|Meteor.Error```
 
 Is ```undefined``` if meteor method successfully execute, ```Meteor.Error``` otherwise.
 
-*callback.arguments.result*
+**callback**.*arguments.result*
 
 Type: ```undefined|boolean```
 
 Is ```undefined``` if meteor method returns ```error```. Is ```true``` if right ```token``` is sent, ```false``` otherwise.
 
 ### invalidateSession(sessionId) *server-side*
-### invalidateSession(sessionId, [callback]) *client-side*
+### invalidateSession([callback]) *client-side*
 
-Invalidates confirmation session
+Invalidates confirmation session. Sets active session to ```null``` on success callback.
 
-**sessionId**
+**sessionId** *server-side-only*
 
 Type: ```string```
 
-Id of confirmation session.
+Id of confirmation session. Uses active session on client-side.
 
 **callback** (*client-side-only*)
 
@@ -261,13 +265,13 @@ Type: ```function(error, result)```
 
 Callback function to call when Meteor method returns.
 
-*callback.arguments.error*
+**callback**.*arguments.error*
 
 Type: ```undefined|Meteor.Error```
 
 Is ```undefined``` if meteor method successfully execute, ```Meteor.Error``` otherwise.
 
-*callback.arguments.result*
+**callback**.*arguments.result*
 
 Type: ```undefined|boolean```
 
@@ -284,13 +288,13 @@ Type: ```object```
 
 Contact details stored in ```Meteor.user().profile[instance.profile]```. Expects to be ```{contact, factor}```
 
-*returns.factor*
+**returns**.*factor*
 
 Type: ```string```
 
 The name/type of factor to send token via, i.e. 'email', 'telegram' or 'SMS'.
 
-*returns.contact*
+**returns**.*contact*
 
 Type: ```string```
 
@@ -302,25 +306,25 @@ Type: ```function(error, result)```
 
 Callback function to call when Meteor method returns.
 
-*callback.arguments.error*
+**callback**.*arguments.error*
 
 Type: ```undefined|Meteor.Error```
 
 Is ```undefined``` if meteor method successfully execute, ```Meteor.Error``` otherwise.
 
-*callback.arguments.result*
+**callback**.*arguments.result*
 
 Type: ```undefined|object```
 
 Is ```undefined``` if meteor method returns ```error```. Is ```{factor, contact}``` otherwise.
 
-*callback.arguments.result.factor*
+**callback**.*arguments.result.factor*
 
 Type: ```string```
 
 The name/type of factor to send token via, i.e. 'email', 'telegram' or 'SMS'.
 
-*callback.arguments.result.contact*
+**callback**.*arguments.result.contact*
 
 Type: ```string```
 

@@ -17,42 +17,49 @@ export class TokenAffirm {
     check(identifier, String);
     this.identifier = identifier;
     this.prefix = `TokenAffirm:${this.identifier}`;
+    this.session = null;
   }
 
   /**
-   * requestToken - request a confirmation token for user action
+   * requestToken - request a confirmation token for user action, only 1 session
+   * may be active at the same time
    *
    * @param  {function} callback function to call when server returns result
    */
   requestToken(callback){
     check(callback, Function);
-    Meteor.call(`${this.prefix}/requestToken`, callback);
+    Meteor.call(`${this.prefix}/requestToken`, this.session, (err, res)=>{
+      if (res) {this.session = res;}
+      callback(err, res);
+    });
   }
 
   /**
    * verifyToken - verify token against a session
    *
-   * @param  {string} sessionId id of session to verify
    * @param  {string} token     token used for verification
    * @param  {function} callback  function to call when server returns result
    */
-  verifyToken(sessionId, token, callback){
-    check(sessionId, String);
+  verifyToken(token, callback){
     check(token, String);
     check(callback, Function);
-    Meteor.call(`${this.prefix}/verifyToken`, sessionId, token, callback);
+    Meteor.call(`${this.prefix}/verifyToken`, this.session, token, (err, res)=>{
+      if (res === true) {this.session = null;}
+      callback(err, res);
+    });
   }
 
   /**
    * invalidateSession - invalidates a session
    *
-   * @param  {string} sessionId id of session to invalidate
    * @param  {function} callback = ()=>{}  optional function to call when server returns result
    */
-  invalidateSession(sessionId, callback = ()=>{}){
-    check(sessionId, String);
+  invalidateSession(callback = ()=>{}){
     check(callback, Function);
-    Meteor.call(`${this.prefix}/invalidateSession`, sessionId, callback);
+    Meteor.call(`${this.prefix}/invalidateSession`, this.session, (err, res)=>{
+      if (res) {this.session = null;}
+      callback(err, res);
+    });
   }
 
   /**
@@ -69,13 +76,14 @@ export class TokenAffirm {
    * assertOpenSession - check if there is a session of id awaiting token
    * useful for checking if need to regenerate token
    *
-   * @param  {string} sessionId id of session to check
-   * @param  {function} callback = ()=>{}  optional function to call when server returns result
+   * @param  {function} callback function to call when server returns result
    */
-  assertOpenSession(sessionId, callback = ()=>{}){
-    check(sessionId, String);
+  assertOpenSession(callback = ()=>{}){
     check(callback, Function);
-    Meteor.call(`${this.prefix}/assertOpenSession`, sessionId, callback);
+    Meteor.call(`${this.prefix}/assertOpenSession`, this.session, (err, res)=>{
+      if (res === false) {this.session = null;}
+      callback(err, res);
+    });
   }
 
 }

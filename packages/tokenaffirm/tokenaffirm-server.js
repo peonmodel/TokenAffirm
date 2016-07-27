@@ -109,11 +109,14 @@ export class TokenAffirm {
        *
        * @throws {Meteor.Error} when contact details in user profile does not
        * correspond with configuration details of session
+       * @param {string} sessionId id of previous session to invalidate
        * @returns {string}  session id of confirmation
        */
-      [`${prefix}/requestToken`]:function requestToken(){
+      [`${prefix}/requestToken`]:function requestToken(sessionId){
+        check(sessionId, Match.Maybe(String));
         let user = Meteor.user();
         if (!user) {throw new Meteor.Error(`login required`);}
+        if (sessionId) {this.invalidateSession(sessionId);}
         let notify = get(user, `profile.${instance.config.profile}`);
         check(notify, {contact: String, factor: String});
         let { contact, factor } = notify;
@@ -254,13 +257,14 @@ export class TokenAffirm {
 
 
   /**
-   * invalidateSession - invalidates a confirmation session
+   * invalidateSession - invalidates a confirmation session, does not remove
+   * validated sessions
    *
    * @param  {string} sessionId id of session to invalidate
    * @returns {number}           1 if session is successfully invalidated
    */
   invalidateSession(sessionId){
-    return this.collection.remove({_id: sessionId});
+    return this.collection.remove({_id: sessionId, verifyAt: {$exists: false}});
   }
 
   /**
