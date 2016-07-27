@@ -1,6 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { TokenAffirm } from 'meteor/freelancecourtyard:tokenaffirm';
-import { Accounts } from 'meteor/accounts-password';
+import { Accounts } from 'meteor/accounts-base';
 
 /*global _TA: true*/
 /*global _Accounts: true*/
@@ -12,6 +12,18 @@ if (Meteor.isDevelopment) {
       settings: {},
     },
   }});
+  if (!Accounts.users.findOne({username: 'u1'})){
+    Accounts.createUser({
+      username: 'u1',
+      password: 'pw',
+      profile: {
+        TokenAffirm: {
+          factor: 'default',
+          contact: 'default contact',
+        },
+      },
+    });
+  }
 }
 
 Meteor.startup(() => {

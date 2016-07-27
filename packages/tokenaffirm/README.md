@@ -27,6 +27,10 @@ Meteor package to affirm actions of users. Sends a one-time token that user will
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Install
+Import class TokenAffirm from the package.
+```
+import { TokenAffirm } from 'meteor/freelancecourtyard:tokenaffirm';
+```
 
 ## Usage
 
@@ -50,7 +54,8 @@ Affirm.requestToken((error, session)=>{
 });
 ```
 Request a confirmation session-token, session id will be returned to client while
-token is sent to the other factor.
+token is sent to the other factor. Previous session if any will be invalidated.
+Only one active session per client may be open at the same time.
 ```
 // verify token
 Affirm.verifyToken(session, token, (error, isVerified)=>{
@@ -108,11 +113,23 @@ Object containing the send function used to send the token. *factor_name* is nam
 
 **options.factors.[*factor_name*].send**
 
-Type: ```function(contact, token, factor)```
+Type: ```function(contact, token, factor, settings, callback)```
 
-Default: ```(contact, token, factor)=>{console.log(`token: ${token} sent to ${contact} via ${factor}`)}```
+Default: ``` (contact, token, factor, settings, callback)=>{callback(undefined, 'success');} ```
 
-Send function used to send the token
+Send function used to send the token, is typically an asynchronous function requiring ```callback```. ```settings``` refer to settings object, see [[*factor_name*].settings](#**options.factors.[*factor_name*].settings**).
+
+**options.factors.[*factor_name*].send.*callback***.*arguments.error*
+
+Type: ```error```
+
+Error thrown by user-defined sending method. If error object is not already Meteor.Error instance, it will be wrapped as one and eventually thrown back to client.
+
+**options.factors.[*factor_name*].send.*callback***.*arguments.result*
+
+Type: ```success```
+
+Success object returned by sending method. Will only be used to check for success, ignored otherwise.
 
 **options.factors.[*factor_name*].settings**
 
@@ -120,7 +137,7 @@ Type: ```object|null|undefined```
 
 Default: ```undefined```
 
-Settings used with send function (*currently unused*)
+Settings used with send function.
 
 **generate**
 
@@ -128,7 +145,7 @@ Type: ```function()``` (return string)
 
 Default: ```()=>Random.id(6)```
 
-Generate function for the token, return result should be string
+Generate function for the token, return result should be string.
 
 **validate**
 
@@ -136,7 +153,7 @@ Type: ```function(userId)``` (return boolean)
 
 Default: ```(userId)=>true```
 
-Validate function for meteor method, limits user by id who may affirm actions
+Validate function for meteor method, limits user by id who may affirm actions.
 
 **settings**
 
@@ -186,13 +203,25 @@ Default: ```TokenAffirm```
 
 Where contacts details used to send user token is stored within profile. Default is pointing to ```Meteor.user().profile['TokenAffirm']```
 
-### requestToken() *server-side*
+### requestToken(contact, factor) *server-side*
 ### requestToken(callback) *client-side*
 
 Create a session for confirmation with token for active Meteor user. Sends token via another factor and return session id.
 Also invalidates any old session still pending if any. Sets active session to ```result``` on success callback.
 
 Only 1 session may be active at one time.
+
+**contact** *server-side-only*
+
+Type: ```string```
+
+Contact address of user via the factor (contact method), typically phone numbers or email addresses.
+
+**factor** *server-side-only*
+
+Type: ```string```
+
+The type of factor (contact method), e.g. 'telegram', 'email' or 'SMS'.
 
 **callback** *client-side*
 

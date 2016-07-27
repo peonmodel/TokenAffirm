@@ -8,7 +8,10 @@ import { _ } from 'meteor/underscore';
 let defaultConfig = {
   factors: {
     default: {
-      send: (contact, token, factor = 'unknown')=>{console.log(`token: ${token} sent to ${contact} via ${factor}`);},
+      send: (contact, token, factor, settings, callback)=>{
+        console.log(`token: ${token} sent to ${contact} via ${factor} with settings ${settings}`);
+        callback(undefined, 'send success');  // callback takes in (err, res)
+      },
       // receive: () => {console.log(`receive function unsupported`);},
       settings: null,
     },
@@ -28,7 +31,6 @@ let defaultConfig = {
  */
 export class TokenAffirm {
 
-
   /**
    * constructor - create a TokenAffirm instance
    *
@@ -46,7 +48,6 @@ export class TokenAffirm {
 
     this.defineMethods(identifier);
   }
-
 
   /**
    * validateConfig - validates the configuration, replace with defaults otherwise
@@ -69,6 +70,7 @@ export class TokenAffirm {
       profile: Match.Maybe(String),
     });
     Object.assign(this.config, config);
+    // TODO: immutable?
   }
 
   /**
@@ -113,10 +115,11 @@ export class TokenAffirm {
        * @returns {string}  session id of confirmation
        */
       [`${prefix}/requestToken`]:function requestToken(sessionId){
+        // TODO: use this.connection.id and user to find session instead
         check(sessionId, Match.Maybe(String));
         let user = Meteor.user();
         if (!user) {throw new Meteor.Error(`login required`);}
-        if (sessionId) {this.invalidateSession(sessionId);}
+        if (sessionId) {instance.invalidateSession(sessionId);}
         let notify = get(user, `profile.${instance.config.profile}`);
         check(notify, {contact: String, factor: String});
         let { contact, factor } = notify;
@@ -219,21 +222,30 @@ export class TokenAffirm {
     return !!get(session, 'verifyAt');
   }
 
-
   /**
-   * requestToken - request a token to affirm user actions
+   * requestToken - gets wrapAsync version of requestTokenAsync, behaves synchronously
    *
-   * @param  {string} contactAddress essential contact address, i.e. phone number or email address
-   * @param  {string} contactMethod  name of factor, i.e. 'telegram', 'SMS' or 'email'
-   * @returns {string}                id of session created
+   * @returns {function}  wrapAsync-ed function
    */
-  requestToken(contactAddress, contactMethod){
-    let token = this.generateToken();
-    let sessionId = this.createSession(token, contactMethod);
-    this.sendToken(contactAddress, token, contactMethod);
-    return sessionId;
+  get requestToken(){
+    return Meteor.wrapAsync(this.requestTokenAsync);
   }
 
+  /**
+   * requestTokenAsync - request a token to affirm user actions, is asynchronous
+   *
+   * @param  {string} contact essential contact address, i.e. phone number or email address
+   * @param  {string} factor  name of factor, i.e. 'telegram', 'SMS' or 'email'
+   * @param {function} callback function to pass to async send method
+   */
+  requestTokenAsync(contact, factor, callback){
+    let token = this.generateToken();
+    let sessionId = this.createSession(token, factor);
+    this.sendToken(contact, token, factor, (err/*, res*/)=>{
+      if (err) {callback(err);}
+      else {callback(undefined, sessionId);}
+    });
+  }
 
   /**
    * verifyToken - verify a token - session
@@ -254,7 +266,6 @@ export class TokenAffirm {
     });
     return true;
   }
-
 
   /**
    * invalidateSession - invalidates a confirmation session, does not remove
@@ -283,22 +294,29 @@ export class TokenAffirm {
   }
 
   /**
-   * sendToken - sends token via the factor user defined
+   * sendToken - sends token via the factor user-defined
+   * as the user-defined send function may be asynchronous, this function
+   * is wrapped
    *
    * @param  {string} contact address to send token to
    * @param  {string} token   token used for verification
    * @param  {string} factor  name of factor to sent token via
-   * @returns {*}         return value of user-defined sending function
+   * @param {function} callback function to pass to async send method
    */
-  sendToken(contact, token, factor){
+  sendToken(contact, token, factor, callback){
     let method = this.config.factors[factor];
     if (!method) {
       console.error(`error, ${factor} not supported`);
       console.log(`printing token on console, ${token}`);
     }
-    return method.send(contact, token, factor);
+    method.send(contact, token, factor, method.settings, (err, res)=>{
+      if (err) {
+        if (err instanceof Meteor.Error) {callback(err);}
+        else {callback(new Meteor.Error(err));}
+      }
+      else {callback(undefined, res);}
+    });
   }
-
 
   /**
    * generateToken - generates a token, uses user defined function to create unique verification token
@@ -308,7 +326,6 @@ export class TokenAffirm {
   generateToken(){
     return this.config.generate();
   }
-
 
   /**
    * createSession - creates a verification session
@@ -326,7 +343,6 @@ export class TokenAffirm {
     });
   }
 
-
   /**
    * verifyContact - return contact details of active user where token would be sent to
    *
@@ -336,7 +352,6 @@ export class TokenAffirm {
     return get(Meteor.user(), `profile.${this.config.profile}`);
   }
 }
-
 
 /**
  * get - helper function to get value in deeply nested objects
