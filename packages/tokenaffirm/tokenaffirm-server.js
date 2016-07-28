@@ -19,6 +19,7 @@ let defaultConfig = {
   generate: ()=>Random.id(6),
   validate: ()=>true,
   settings: null,
+  timeout: 1000,
   expiry: 5*(60*1000),  // 5 minutes in milliseconds
   retain: 5*(60*1000),
   requestInterval: 10*1000,  // 10 seconds
@@ -114,7 +115,6 @@ export class TokenAffirm {
        * @returns {string}  session id of confirmation
        */
       [`${prefix}/requestToken`]:function requestToken(){
-        // TODO: use this.connection.id and user to find session instead
         let user = Meteor.user();
         if (!user) {throw new Meteor.Error(`login required`);}
         instance.invalidateSession(this.connection.id);
@@ -261,9 +261,7 @@ export class TokenAffirm {
   }
 
   /**
-   * invalidateSession - invalidates a confirmation session, does not remove
-   * validated sessions
-   *
+   * invalidateSession - invalidates a confirmation session, this is still open
    * @param  {string} connectionId id of session to invalidate
    * @returns {number}           1 if session is successfully invalidated
    */
@@ -288,8 +286,7 @@ export class TokenAffirm {
 
   /**
    * sendToken - sends token via the factor user-defined
-   * as the user-defined send function may be asynchronous, this function
-   * is wrapped
+   * as the user-defined send function may be asynchronous, so is this
    *
    * @param  {string} contact address to send token to
    * @param  {string} token   token used for verification
@@ -302,6 +299,13 @@ export class TokenAffirm {
       console.error(`error, ${factor} not supported`);
       console.log(`printing token on console, ${token}`);
     }
+
+    // timeout condition in case user-defined function does not call callback
+    let timeout = get(method, 'settings.timeout') || this.config.timeout;
+    Meteor.setTimeout(()=>{
+      callback(new Meteor.Error(`sending token to ${contact} via ${factor} timed out`), undefined);
+    }, timeout);
+
     method.send(contact, token, factor, method.settings, (err, res)=>{
       if (err) {
         if (err instanceof Meteor.Error) {callback(err);}

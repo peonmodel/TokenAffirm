@@ -105,39 +105,56 @@ Type: ```object```
 
 Object containing the configurable factors used to send the token.
 
-**options.factors.[*factor_name*]**
+**options.factors[*factor_name*]**
 
 Type: ```object```
 
 Object containing the send function used to send the token. *factor_name* is name/type of factor, should be a string for contact method, i.e. 'telegram', 'SMS' or 'email'.
 
-**options.factors.[*factor_name*].send**
+**options.factors[*factor_name*].send**
 
 Type: ```function(contact, token, factor, settings, callback)```
 
 Default: ``` (contact, token, factor, settings, callback)=>{callback(undefined, 'success');} ```
 
-Send function used to send the token, is typically an asynchronous function requiring ```callback```. ```settings``` refer to settings object, see [[*factor_name*].settings](#**options.factors.[*factor_name*].settings**).
+Send function used to send the token, is typically an asynchronous function requiring ```callback```. ```settings``` refer to settings object, see [[*factor_name*].settings](#options.factors[factor_name].settings).
 
-**options.factors.[*factor_name*].send.*callback***.*arguments.error*
+**options.factors[*factor_name*].send.*callback***
+
+Type: ```function```
+
+Sending function should call ```callback``` function to assure asynchronous function have completed.
+Timeout function will be called otherwise and is assumed to have failed.
+
+**options.factors[*factor_name*].send.*callback***.*arguments.error*
 
 Type: ```error```
 
 Error thrown by user-defined sending method. If error object is not already Meteor.Error instance, it will be wrapped as one and eventually thrown back to client.
 
-**options.factors.[*factor_name*].send.*callback***.*arguments.result*
+**options.factors[*factor_name*].send.*callback***.*arguments.result*
 
 Type: ```success```
 
 Success object returned by sending method. Will only be used to check for success, ignored otherwise.
 
-**options.factors.[*factor_name*].settings**
+<a name="options.factors[factor_name].settings">
+</a>
+**options.factors[*factor_name*].settings**
 
 Type: ```object|null|undefined```
 
 Default: ```undefined```
 
 Settings used with send function.
+
+**options.factors[*factor_name*].settings.timeout**
+
+Type: ```integer``` (optional)
+
+Default: ```1000``` (milliseconds, see [timeout](#timeout))
+
+How long to wait for sending server to reply before assuming operation failed.
 
 **generate**
 
@@ -162,6 +179,15 @@ Type: ```object|null|undefined```
 Default: ```null```
 
 Settings that may be useful (*currently unused*)
+
+<a name="timeout"></a>
+**timeout**
+
+Type: ```integer```
+
+Default: ```1000``` (milliseconds)
+
+How long before assuming sending token operation failed.
 
 **expiry**
 
