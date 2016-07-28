@@ -119,7 +119,7 @@ export class TokenAffirm {
         if (!user) {throw new Meteor.Error(`login required`);}
         instance.invalidateSession(this.connection.id);
         let notify = get(user, `profile.${instance.config.profile}`);
-        check(notify, {contact: String, factor: String});
+        check(notify, Match.ObjectIncluding({contact: String, factor: String}));
         let { contact, factor } = notify;
         if (!instance.config.factors[factor]){
           throw new Meteor.Error(`${factor} not supported`);
@@ -233,8 +233,8 @@ export class TokenAffirm {
    */
   requestTokenAsync(connectionId, contact, factor, callback){
     let token = this.generateToken();
-    this.createSession(connectionId, token, factor);
-    this.sendToken(contact, token, factor, (err/*, res*/)=>{
+    let sessionId = this.createSession(connectionId, token, factor);
+    this.sendToken(sessionId, contact, token, factor, (err/*, res*/)=>{
       if (err) {callback(err);}
       else {callback(undefined, true);}
     });
@@ -261,19 +261,23 @@ export class TokenAffirm {
   }
 
   /**
-   * invalidateSession - invalidates a confirmation session, this is still open
-   * @param  {string} connectionId id of session to invalidate
+   * invalidateSession - invalidates a confirmation session that is still open
+   *
+   * @param  {string} id id of session to invalidate
    * @returns {number}           1 if session is successfully invalidated
    */
-  invalidateSession(connectionId){
-    return this.collection.remove({connectionId: connectionId, verifyAt: {$exists: false}});
+  invalidateSession(id){
+    return (
+      this.collection.remove({connectionId: id, verifyAt: {$exists: false}}) ||
+      this.collection.remove({_id: id, verifyAt: {$exists: false}})
+    );
   }
 
   /**
    * assertOpenSession - check if there is a session of id awaiting token
    * useful for checking if need to regenerate token
    *
-   * @params {string} connectionId id of session to check
+   * @param {string} connectionId id of session to check
    * @returns {boolean }  true if session exist and awaiting token
    */
   assertOpenSession(connectionId){
@@ -288,12 +292,13 @@ export class TokenAffirm {
    * sendToken - sends token via the factor user-defined
    * as the user-defined send function may be asynchronous, so is this
    *
+   * @param {string} sessionId id of session to check
    * @param  {string} contact address to send token to
    * @param  {string} token   token used for verification
    * @param  {string} factor  name of factor to sent token via
    * @param {function} callback function to pass to async send method
    */
-  sendToken(contact, token, factor, callback){
+  sendToken(sessionId, contact, token, factor, callback){
     let method = this.config.factors[factor];
     if (!method) {
       console.error(`error, ${factor} not supported`);
@@ -302,11 +307,13 @@ export class TokenAffirm {
 
     // timeout condition in case user-defined function does not call callback
     let timeout = get(method, 'settings.timeout') || this.config.timeout;
-    Meteor.setTimeout(()=>{
+    let timerId = Meteor.setTimeout(()=>{
       callback(new Meteor.Error(`sending token to ${contact} via ${factor} timed out`), undefined);
+      this.invalidateSession(sessionId);
     }, timeout);
 
     method.send(contact, token, factor, method.settings, (err, res)=>{
+      Meteor.clearTimeout(timerId);
       if (err) {
         if (err instanceof Meteor.Error) {callback(err);}
         else {callback(new Meteor.Error(err));}
