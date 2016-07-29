@@ -28,8 +28,20 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
-  api.use('ecmascript');
-  api.use('tinytest');
+  // utility
+  api.use([
+    'ecmascript',
+    // 'underscore',
+    'mongo',
+  ]);
+  // test engine
+  api.use([
+    'practicalmeteor:mocha',
+    'practicalmeteor:chai',
+    // 'practicalmeteor:sinon',
+  ]);
+  // package to test
   api.use('freelancecourtyard:tokenaffirm');
-  api.mainModule('tokenaffirm-tests.js');
+  api.mainModule('tests/tokenaffirm-server-tests.js', 'server');
+  api.mainModule('tests/tokenaffirm-client-tests.js', 'client');
 });
