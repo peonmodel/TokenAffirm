@@ -86,54 +86,10 @@
 
 		// Custom Globals
 		"globals": {
-			// Core Meteor
-			"Meteor": true,
-			"Session": true,
-			"Template": true,
-			"Tracker": true,
-			"Blaze": true,
-			"Mongo": true,
-			"UI": true,
-			"EJSON": true,
-			"check": true,
-			"Match": true,
-			"Package": true,
-
-			// Additional Meteor
-			"Accounts": true,
-			"ReactiveVar": true,
-			"ReactiveDict": true,
-
-			// Core JS / Node
-			"process": true,
+			// CoreJS/Node
 			"console": true,
-			"require": true,
 
-			// Jasmine
-			"describe": true,
-			"xdescribe": true,
-			"it": true,
-			"xit": true,
-			"expect": true,
-			"beforeAll": true,
-			"beforeEach": true,
-			"afterAll": true,
-			"afterEach": true,
-			"inject": true,
-			"spyOn": true,
-
-			// Other things
-			"_": true,
-			"lodash": true,
-			"Kadira": true,
-			"FlowRouter": true,
-			"BlazeLayout": true,
-			"CryptoJS": true,
-			"sAlert": true,
-			"moment": true,
-			"later": true,
-			"SimpleSchema": true,
-			"SemanticModal": true,
-			"DocHead": true
+			// Core Meteor
+			"Package": true
 		}
 }

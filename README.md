@@ -16,8 +16,8 @@ Meteor package to affirm actions of users. Sends a one-time token that user will
 - [API](#api)
   - [constructor](#constructoridentifier-options-server-side)
   - [requestToken](#requesttoken-server-side)
-  - [verifyToken](#verifytokensessionid-token-server-side)
-  - [invalidateSession](#invalidatesessionsessionid-server-side)
+  - [verifyToken](#verifytokenconnectionid-token-server-side)
+  - [invalidateSession](#invalidatesessionconnectionid-server-side)
   - [verifyContact](#verifycontact-server-side)
   - [isVerified](#isverified-server-side)
 - [Dependencies](#dependencies)
@@ -73,7 +73,7 @@ Verifies a valid session-token pair is sent, once user have gotten the token, us
 ```
 // check session had been verified
 function resumeUserAction(){
-  if (! Affirm.isVerified(sessionId)){
+  if (! Affirm.isVerified(connectionId)){
     // not verified
     throw new Meteor.Error(`action not affirmed`);
   } else {
@@ -265,19 +265,19 @@ Is ```undefined``` if meteor method successfully execute, ```Meteor.Error``` oth
 
 Type: ```undefined|string```
 
-Is ```undefined``` if meteor method returns ```error```. Is ```sessionId``` of confirmation session created. Meanwhile a token will be sent via another factor.
+Is ```undefined``` if meteor method returns ```error```. Is ```true``` if confirmation session successfully created. Meanwhile a token will be sent via another factor.
 
-### verifyToken(sessionId, token) *server-side*
+### verifyToken(connectionId, token) *server-side*
 ### verifyToken(token, callback) *client-side*
 
 Verify user sent the right token for active session. Only one session may be open
-at a time. Sets active session to ```null``` on success callback.
+at a time.
 
-**sessionId** *server-side-only*
+**connectionId** *server-side-only*
 
 Type: ```string```
 
-Id of confirmation session. Uses active session on client-side.
+Id of DDP connection.
 
 **token**
 
@@ -303,16 +303,17 @@ Type: ```undefined|boolean```
 
 Is ```undefined``` if meteor method returns ```error```. Is ```true``` if right ```token``` is sent, ```false``` otherwise.
 
-### invalidateSession(sessionId) *server-side*
+### invalidateSession(connectionId) *server-side*
 ### invalidateSession([callback]) *client-side*
 
 Invalidates confirmation session. Sets active session to ```null``` on success callback.
 
-**sessionId** *server-side-only*
+**connectionId** *server-side-only*
 
 Type: ```string```
 
-Id of confirmation session. Uses active session on client-side.
+Id of DDP connection, used to query for active session as each TokenAffirm instance
+may only have 1 active session per user client.
 
 **callback** (*client-side-only*)
 
@@ -385,6 +386,35 @@ Type: ```string```
 
 The identifier used by factor to send token i.e. email address or phone number.
 
+### assertOpenSession(connectionId) *server-side*
+### assertOpenSession(callback) *client-side*
+
+Check that there is an open unverified session still pending token verification.
+
+**returns** (*server-side-only*)
+
+Type: ```boolean```
+
+Is ```true``` when there is an unexpired, unverified session pending verification, ```false``` otherwise.
+
+**callback** (*client-side-only*)
+
+Type: ```function(error, result)```
+
+Callback function to call when Meteor method returns.
+
+**callback**.*arguments.error*
+
+Type: ```undefined|Meteor.Error```
+
+Is ```undefined``` if meteor method successfully execute, ```Meteor.Error``` otherwise.
+
+**callback**.*arguments.result*
+
+Type: ```undefined|boolean```
+
+Is ```undefined``` if meteor method returns ```error```. Is ```true``` when there is an unexpired, unverified session pending verification, ```false``` otherwise.
+
 ### isVerified() *server-side*
 
 Verify that confirmation session has been verified.
@@ -404,5 +434,10 @@ Is `true` if session exists and has been verified, ```false``` otherwise.
 - documentation for configuration
 - documentation for dependencies
 - documentation for license
-- documentation for assertOpenSession()
-- add callback to verifyToken to aid in resuming action
+- ~~documentation for assertOpenSession()~~
+- add optional server-side callback to verifyToken to aid in resuming action?
+- ~~added wrappedAsync send function~~
+- ~~use connectionId~~
+- publish in Meteor
+- create examples
+- ~~prune .jshintrc~~
